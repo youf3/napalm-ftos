@@ -51,6 +51,8 @@ class FTOSDriver(NetworkDriver):
 
         self.netmiko_optional_args = netmiko_args(optional_args)
 
+        self.config_replace = False
+
     def _send_command(self, command):
         try:
             if isinstance(command, list):
