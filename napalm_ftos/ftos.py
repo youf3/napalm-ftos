@@ -51,6 +51,15 @@ class FTOSDriver(NetworkDriver):
 
         self.netmiko_optional_args = netmiko_args(optional_args)
 
+        # Retrieve file names
+        self.candidate_cfg = optional_args.get('candidate_cfg',
+                'candidate_config.txt')
+        self.merge_cfg = optional_args.get('merge_cfg', 'merge_config.txt')
+        self.rollback_cfg = optional_args.get('rollback_cfg',
+                'rollback_config.txt')
+        self.merge_cfg = optional_args.get('merge_cfg', 'merge_config.txt')
+
+
         self.config_replace = False
 
     def _send_command(self, command):
