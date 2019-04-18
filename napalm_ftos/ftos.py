@@ -33,6 +33,7 @@ from napalm_ftos.utils import (
     prep_addr
 )
 
+from napalm_ftos.utils.config_diff_util import NetworkConfig, dumps
 
 class FTOSDriver(NetworkDriver):
     """NAPALM Dell Force10 FTOS Handler."""
@@ -175,6 +176,31 @@ class FTOSDriver(NetworkDriver):
             config['startup'] = self._send_command("show startup-config")
 
         return config
+
+    def compare_config(self):
+	"""compares the copied merge_config.txt with running-configuration."""
+	if self.config_replace:
+	    new_file = self.candidate_cfg
+	else:
+	    new_file = self.merge_cfg
+	cmd = "show file home {}".format(new_file)
+	new_file_data = self._send_command(cmd)
+
+	cmd = "show running-configuration"
+	running_config_data = self._send_command(cmd)
+
+	candidate = NetworkConfig(indent=1)
+	candidate.load(new_file_data)
+
+	candidate2 = NetworkConfig(indent=1)
+	candidate2.load(running_config_data)
+
+	configobjs = candidate.difference(candidate2)
+	diff_commands = ""
+	if configobjs:
+	    diff_commands = dumps(configobjs, 'commands')
+
+	return diff_commands
 
     def get_environment(self):
         """FTOS implementation of get_environment."""
