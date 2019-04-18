@@ -17,6 +17,7 @@
 
 import re
 import socket
+import difflib
 
 from napalm.base.helpers import textfsm_extractor
 from napalm.base.helpers import mac, ip
@@ -33,7 +34,6 @@ from napalm_ftos.utils import (
     prep_addr
 )
 
-from napalm_ftos.utils.config_diff_util import NetworkConfig, dumps
 
 class FTOSDriver(NetworkDriver):
     """NAPALM Dell Force10 FTOS Handler."""
@@ -188,6 +188,21 @@ class FTOSDriver(NetworkDriver):
 
         return config
 
+    def _remove_unusedline(self, text):
+        ignore_start_line = [
+                "!",
+                "Current Configuration"
+                ]
+        data = []
+
+        for lines in text.splitlines():
+            for ignore in ignore_start_line:
+                if lines.startswith(ignore):
+                    break
+            else:
+                data.append(lines)
+        return data
+
     def compare_config(self):
 	"""compares the copied merge_config.txt with running-configuration."""
 	if self.config_replace:
@@ -202,18 +217,12 @@ class FTOSDriver(NetworkDriver):
 	cmd = "show running"
 	running_config_data = self._send_command(cmd)
 
-	candidate = NetworkConfig(indent=1)
-	candidate.load(new_file_data)
+        candidate = self._remove_unusedline(new_file_data)
+        candidate2 = self._remove_unusedline(running_config_data)
 
-	candidate2 = NetworkConfig(indent=1)
-	candidate2.load(running_config_data)
+        diff = difflib.unified_diff(candidate, candidate2)
 
-	configobjs = candidate.difference(candidate2)
-	diff_commands = ""
-	if configobjs:
-	    diff_commands = dumps(configobjs, 'commands')
-
-	return diff_commands
+	return '\n'.join(diff)
 
     def get_environment(self):
         """FTOS implementation of get_environment."""
