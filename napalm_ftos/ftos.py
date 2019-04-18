@@ -194,10 +194,12 @@ class FTOSDriver(NetworkDriver):
 	    new_file = self.candidate_cfg
 	else:
 	    new_file = self.merge_cfg
-	cmd = "show file home {}".format(new_file)
+	#cmd = "show file {}".format(new_file)
+	#new_file_data = self._send_command(cmd)
+	cmd = "show startup"
 	new_file_data = self._send_command(cmd)
 
-	cmd = "show running-configuration"
+	cmd = "show running"
 	running_config_data = self._send_command(cmd)
 
 	candidate = NetworkConfig(indent=1)
