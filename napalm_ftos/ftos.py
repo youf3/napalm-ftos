@@ -336,7 +336,7 @@ class FTOSDriver(NetworkDriver):
             for lldp_entry in entries:
                 hostname = lldp_entry['remote_system_name']
                 lldp_dict = {
-                    'port': lldp_entry['remote_port_description'],
+                    'port': lldp_entry['remote_port'],
                     'hostname': hostname,
                 }
                 lldp[intf_name].append(lldp_dict)
@@ -373,7 +373,7 @@ class FTOSDriver(NetworkDriver):
             local_intf = canonical_interface_name(lldp_entry.pop('local_interface'))
 
             # cast some mac addresses
-            for k in ['remote_port', 'remote_chassis_id']:
+            for k in ['remote_chassis_id']:
                 if len(lldp_entry[k].strip()) > 0:
                     lldp_entry[k] = mac(lldp_entry[k])
 
