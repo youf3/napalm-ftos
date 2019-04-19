@@ -167,8 +167,8 @@ class FTOSDriver(NetworkDriver):
                     neighbor[k] = -1
 
             if entry['remote_as'] not in table[vrf]:
-                table[vrf][int(entry['remote_as'])] = []
-            table[vrf][int(entry['remote_as'])].append(neighbor)
+                table[vrf][entry['remote_as']] = []
+            table[vrf][entry['remote_as']].append(neighbor)
 
         return table
 

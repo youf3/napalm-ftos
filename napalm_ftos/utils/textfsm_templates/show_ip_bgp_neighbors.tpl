@@ -67,6 +67,7 @@ Value Filldown REMOTE_ADDRESS ([a-f0-9\.:]+)
 Value REMOTE_PORT (\d+)
 
 Start
+  ^(\*)?\s+\d+.* -> Continue.Record
   ^BGP neighbor is ${REMOTE_ADDRESS}, remote AS ${REMOTE_AS},
   ^\s*BGP remote router ID ${ROUTER_ID}
   ^\s*BGP state ${CONNECTION_STATE},
