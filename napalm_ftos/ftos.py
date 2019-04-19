@@ -291,6 +291,9 @@ class FTOSDriver(NetworkDriver):
 
         show_ver = self._send_command("show system stack-unit 0")
 
+        if "% Error: Value out of range at \"^\" marker." in show_ver:
+            show_ver = self._send_command("show system stack-unit 1")
+
         # parse version output
         for line in show_ver.splitlines():
             if line.startswith('Up Time'):
@@ -302,7 +305,11 @@ class FTOSDriver(NetworkDriver):
                 facts['os_version'] = line.split(': ')[1].strip()
             elif line.startswith('Serial Number'):
                 facts['serial_number'] = line.split(': ')[1].strip()
+            elif line.startswith('Service Tag'):
+                facts['serial_number'] = line.split(': ')[1].strip()
             elif line.startswith('Product Name'):
+                facts['model'] = line.split(': ')[1].strip()
+            elif line.startswith('Current Type'):
                 facts['model'] = line.split(': ')[1].strip()
 
         # invoke get_interfaces and list interfaces
@@ -410,6 +417,8 @@ class FTOSDriver(NetworkDriver):
         interfaces = {}
         for i, entry in enumerate(iface_entries):
             if len(entry['iface_name']) == 0:
+                continue
+            if len(entry['mac_address']) == 0:
                 continue
 
             # init interface entry with default values
