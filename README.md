@@ -9,6 +9,7 @@ NAPALM driver for Dell EMC/Force10 FTOS
 ### Implemented APIs
 
 * close
+* cli
 * get_arp_table
 * get_bgp_neighbors_detail
 * get_config
@@ -32,7 +33,6 @@ NAPALM driver for Dell EMC/Force10 FTOS
 
 ### Missing APIs.
 
-* cli
 * commit_config
 * compare_config
 * compliance_report

@@ -303,6 +303,8 @@ class FTOSDriver(NetworkDriver):
                 facts['vendor'] = line.split(': ')[1].strip()
             elif ' OS Version' in line:
                 facts['os_version'] = line.split(': ')[1].strip()
+            elif line.startswith('FTOS Version'):
+                facts['os_version'] = line.split(': ')[1].strip()
             elif line.startswith('Serial Number'):
                 facts['serial_number'] = line.split(': ')[1].strip()
             elif line.startswith('Service Tag'):
