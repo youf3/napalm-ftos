@@ -10,5 +10,4 @@ Value VRF_ID (\d+)
 
 Start
   ^(\*)?\s+\d+.* -> Continue.Record
-  ^${VRF_NAME}\s+${VRF_ID}\s+((\w{2})((\s?+)(\d?\,?)+)
-  ^\s+((\w{2})((\s?+)(\d?\,?)+)) -> Record
+  ^${VRF_NAME}\s+${VRF_ID}.* -> Record
