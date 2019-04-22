@@ -126,6 +126,9 @@ class FTOSDriver(NetworkDriver):
 
         table = {u'global': {}}
         for idx, entry in enumerate(neighbors):
+            if not entry['router_id']:
+                continue
+
             # TODO: couldn't detect VRF from output
             vrf = u'global'
 
