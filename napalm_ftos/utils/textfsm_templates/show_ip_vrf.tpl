@@ -5,7 +5,7 @@
 #                                          Vl 1,202,999,2000,3301
 #mgmt                             101     Vl 101,3101
 #Network                          103     Vl 1001,3201
-Value VRF_NAME ([a-zA-Z0-9]_+)
+Value VRF_NAME ([a-zA-Z0-9_]+)
 Value VRF_ID (\d+)
 
 Start

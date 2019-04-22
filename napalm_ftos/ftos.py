@@ -132,7 +132,7 @@ class FTOSDriver(NetworkDriver):
                 table[vrf['vrf_name']] = {}
 
 
-            cmd = ["show ip bgp "+vrf['vrf_name']+" neighbors"]
+            cmd = ["show ip bgp vrf "+vrf['vrf_name']+" neighbors"]
             if len(neighbor_address.strip()) > 0:
                 cmd.append(neighbor_address)
 
