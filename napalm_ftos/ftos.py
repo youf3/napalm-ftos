@@ -113,71 +113,74 @@ class FTOSDriver(NetworkDriver):
             table.append(entry)
 
         return table
-    def get_vrf(self):
+
+    def _get_vrfs(self):
         cmd = ["show ip vrf"]
         vrfs = self._send_command(cmd)
         vrfs = textfsm_extractor(self, 'show_ip_vrf', vrfs)
-        print vrfs
+        return vrfs
 
     def get_bgp_neighbors_detail(self, neighbor_address=u''):
         """FTOS implementation of get_bgp_neighbors_detail."""
-        cmd = ["show ip bgp neighbors"]
-        if len(neighbor_address.strip()) > 0:
-            cmd.append(neighbor_address)
 
-        command = ' '.join(cmd)
-        neighbors = self._send_command(command)
-        neighbors = textfsm_extractor(self, 'show_ip_bgp_neighbors', neighbors)
+        table = {}
 
-        table = {u'default': {}}
-        for idx, entry in enumerate(neighbors):
-            if not entry['router_id']:
-                continue
+        vrfs = self._get_vrfs()
 
-            # TODO: couldn't detect VRF from output
-            vrf = u'default'
+        for vrf in vrfs:
 
-            neighbor = {
-                "up": (entry['connection_state'] == 'ESTABLISHED'),
-                "local_as": -1,  # unimplemented
-                "router_id": ip(entry['router_id']),
-                "local_address": py23_compat.text_type(entry['local_address']),
-                "routing_table": u'',  # unimplemented
-                "local_address_configured": False,  # unimplemented
-                "local_port": entry['local_port'],
-                "remote_address": ip(entry['remote_address']),
-                "remote_as": int(entry['remote_as']),
-                "multihop": False,  # unimplemented
-                "multipath": False,  # unimplemented
-                "remove_private_as": False,  # unimplemented
-                "import_policy": u'',  # unimplemented
-                "export_policy": u'',  # unimplemented
-                "connection_state": entry['connection_state'],
-                "previous_connection_state": u'',  # unimplemented
-                "last_event": u'',  # unimplemented
-                "suppress_4byte_as": False,  # unimplemented
-                "local_as_prepend": False,  # unimplemented
-                "configured_holdtime": -1,  # unimplemented
-                "configured_keepalive": -1,  # unimplemented
-                "active_prefix_count": -1,  # unimplemented
-                "received_prefix_count": -1,  # unimplemented
-                "suppressed_prefix_count": -1,  # unimplemented
-            }
+            cmd = ["show ip bgp "+vrf['vrf_name']+" neighbors"]
+            if len(neighbor_address.strip()) > 0:
+                cmd.append(neighbor_address)
 
-            # cast some integers
-            for k in ['remote_as', 'local_port', 'remote_port', 'input_messages',
-                      'output_messages', 'input_updates', 'output_updates',
-                      'messages_queued_out', 'holdtime', 'keepalive',
-                      'accepted_prefix_count', 'advertised_prefix_count',
-                      'flap_count']:
-                try:
-                    neighbor[k] = int(entry[k])
-                except ValueError:
-                    neighbor[k] = -1
+            command = ' '.join(cmd)
+            neighbors = self._send_command(command)
+            neighbors = textfsm_extractor(self, 'show_ip_bgp_neighbors', neighbors)
+            for idx, entry in enumerate(neighbors):
+                if not entry['router_id']:
+                    continue
 
-            if neighbor['remote_as'] not in table[vrf]:
-                table[vrf][neighbor['remote_as']] = []
-            table[vrf][neighbor['remote_as']].append(neighbor)
+                neighbor = {
+                    "up": (entry['connection_state'] == 'ESTABLISHED'),
+                    "local_as": -1,  # unimplemented
+                    "router_id": ip(entry['router_id']),
+                    "local_address": py23_compat.text_type(entry['local_address']),
+                    "routing_table": u'',  # unimplemented
+                    "local_address_configured": False,  # unimplemented
+                    "local_port": entry['local_port'],
+                    "remote_address": ip(entry['remote_address']),
+                    "remote_as": int(entry['remote_as']),
+                    "multihop": False,  # unimplemented
+                    "multipath": False,  # unimplemented
+                    "remove_private_as": False,  # unimplemented
+                    "import_policy": u'',  # unimplemented
+                    "export_policy": u'',  # unimplemented
+                    "connection_state": entry['connection_state'],
+                    "previous_connection_state": u'',  # unimplemented
+                    "last_event": u'',  # unimplemented
+                    "suppress_4byte_as": False,  # unimplemented
+                    "local_as_prepend": False,  # unimplemented
+                    "configured_holdtime": -1,  # unimplemented
+                    "configured_keepalive": -1,  # unimplemented
+                    "active_prefix_count": -1,  # unimplemented
+                    "received_prefix_count": -1,  # unimplemented
+                    "suppressed_prefix_count": -1,  # unimplemented
+                }
+
+                # cast some integers
+                for k in ['remote_as', 'local_port', 'remote_port', 'input_messages',
+                          'output_messages', 'input_updates', 'output_updates',
+                          'messages_queued_out', 'holdtime', 'keepalive',
+                          'accepted_prefix_count', 'advertised_prefix_count',
+                          'flap_count']:
+                    try:
+                        neighbor[k] = int(entry[k])
+                    except ValueError:
+                        neighbor[k] = -1
+
+                if neighbor['remote_as'] not in table[vrf['vrf_name']]:
+                    table[vrf['vrf_name']][neighbor['remote_as']] = []
+                table[vrf['vrf_name']][neighbor['remote_as']].append(neighbor)
 
         return table
 
