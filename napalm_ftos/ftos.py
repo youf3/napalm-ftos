@@ -113,6 +113,11 @@ class FTOSDriver(NetworkDriver):
             table.append(entry)
 
         return table
+    def get_vrf(self):
+        cmd = ["show ip vrf"]
+        vrfs = self._send_command(cmd)
+        vrfs = textfsm_extractor(self, 'show_ip_vrf', vrfs)
+        print vrfs
 
     def get_bgp_neighbors_detail(self, neighbor_address=u''):
         """FTOS implementation of get_bgp_neighbors_detail."""
@@ -124,13 +129,13 @@ class FTOSDriver(NetworkDriver):
         neighbors = self._send_command(command)
         neighbors = textfsm_extractor(self, 'show_ip_bgp_neighbors', neighbors)
 
-        table = {u'global': {}}
+        table = {u'default': {}}
         for idx, entry in enumerate(neighbors):
             if not entry['router_id']:
                 continue
 
             # TODO: couldn't detect VRF from output
-            vrf = u'global'
+            vrf = u'default'
 
             neighbor = {
                 "up": (entry['connection_state'] == 'ESTABLISHED'),
