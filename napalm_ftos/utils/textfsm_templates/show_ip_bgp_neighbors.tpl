@@ -67,7 +67,6 @@ Value Filldown REMOTE_ADDRESS ([a-f0-9\.:]+)
 Value REMOTE_PORT (\d+)
 
 Start
-  ^(\*)?\s+\d+.* -> Continue.Record
   ^BGP neighbor is ${REMOTE_ADDRESS}, remote AS ${REMOTE_AS},
   ^\s*BGP remote router ID ${ROUTER_ID}
   ^\s*BGP state ${CONNECTION_STATE},
@@ -78,7 +77,7 @@ Start
   ^\s*Prefixes advertised ${ADVERTISED_PREFIX_COUNT},
   ^\s*Connections established \d+; dropped ${FLAP_COUNT}
   ^Local host: ${LOCAL_ADDRESS}, Local port: ${LOCAL_PORT}
-  ^Foreign host: ${REMOTE_ADDRESS}, Foreign port: ${REMOTE_PORT} -> Record
+  ^Foreign host: ${REMOTE_ADDRESS}, Foreign port: ${REMOTE_PORT} -> Next.Record
 
 Received
   ^.*, ${INPUT_UPDATES} updates -> Start

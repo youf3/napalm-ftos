@@ -4,7 +4,7 @@
   "hostname": "switch01.localdomain",
   "fqdn": "switch01.localdomain",
   "os_version": "9.13(0.2)",
-  "serial_number": "CN1234847E0213",
+  "serial_number": "ABCD123",
   "model": "DELL MXL 10/40GbE",
   "interface_list": [
     "FortyGigabitEthernet 0/33",
