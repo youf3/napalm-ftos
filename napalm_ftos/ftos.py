@@ -128,6 +128,9 @@ class FTOSDriver(NetworkDriver):
         vrfs = self._get_vrfs()
 
         for vrf in vrfs:
+            if vrf['vrf_name'] not in table:
+                table[vrf['vrf_name']] = {}
+
 
             cmd = ["show ip bgp "+vrf['vrf_name']+" neighbors"]
             if len(neighbor_address.strip()) > 0:
