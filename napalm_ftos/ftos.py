@@ -148,7 +148,7 @@ class FTOSDriver(NetworkDriver):
                     "local_as": -1,  # unimplemented
                     "router_id": ip(entry['router_id']),
                     "local_address": py23_compat.text_type(entry['local_address']),
-                    "routing_table": u'',  # unimplemented
+                    "routing_table": vrf['vrf_name'],
                     "local_address_configured": False,  # unimplemented
                     "local_port": entry['local_port'],
                     "remote_address": ip(entry['remote_address']),
