@@ -141,6 +141,7 @@ class FTOSDriver(NetworkDriver):
                 "local_address_configured": False,  # unimplemented
                 "local_port": entry['local_port'],
                 "remote_address": ip(entry['remote_address']),
+                "remote_as": int(entry['remote_as']),
                 "multihop": False,  # unimplemented
                 "multipath": False,  # unimplemented
                 "remove_private_as": False,  # unimplemented
@@ -169,9 +170,9 @@ class FTOSDriver(NetworkDriver):
                 except ValueError:
                     neighbor[k] = -1
 
-            if entry['remote_as'] not in table[vrf]:
-                table[vrf][entry['remote_as']] = []
-            table[vrf][entry['remote_as']].append(neighbor)
+            if neighbor['remote_as'] not in table[vrf]:
+                table[vrf][neighbor['remote_as']] = []
+            table[vrf][neighbor['remote_as']].append(neighbor)
 
         return table
 
