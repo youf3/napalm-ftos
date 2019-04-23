@@ -770,13 +770,14 @@ class FTOSDriver(NetworkDriver):
                         break
 
                     min_avg_max = re.search(r"(\d*)/(\d*)/(\d*)", line)
-                    ping_dict["success"].update(
+                    if min_avg_max:
+                        ping_dict["success"].update(
                         {
                             "rtt_min": float(min_avg_max.group(1)),
                             "rtt_avg": float(min_avg_max.group(2)),
                             "rtt_max": float(min_avg_max.group(3)),
-                        }
-                    )
+                            }
+                        )
                     results_array = []
                     for i in range(probes_received):
                         results_array.append(
