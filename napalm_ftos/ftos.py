@@ -746,7 +746,7 @@ class FTOSDriver(NetworkDriver):
         result = self._send_command(command)
 
         # check if output holds an error
-        if "%" in result
+        if "%" in result:
             ping_dict["error"] = result
         elif "Sending" in result:
             ping_dict["success"] = {
