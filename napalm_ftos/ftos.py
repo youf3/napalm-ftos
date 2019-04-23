@@ -731,13 +731,14 @@ class FTOSDriver(NetworkDriver):
     def ping(self, destination, source=u'', ttl=255, timeout=2, size=100, count=5, vrf=u''):
         """FTOS implementation of ping."""
         # build command string based on input
+        ping_dict = {}
         cmd = ["ping"]
-        if len(vrf.strip()) > 0:
+        if vrf:
             cmd.append("vrf %s" % vrf)
         cmd.append(destination)
         cmd.append("timeout %d" % timeout)
         cmd.append("datagram-size %d" % size)
-        if len(source.strip()) > 0:
+        if source != "":
             cmd.append("source ip %s" % source)
         cmd.append("count %d" % count)
 
@@ -745,36 +746,48 @@ class FTOSDriver(NetworkDriver):
         result = self._send_command(command)
 
         # check if output holds an error
-        m = re.search(r'% Error: (.+)', result)
-        if m:
-            return {
-                'error': m.group(1)
-            }
+        if m = re.search(r'% Error: (.+)', result):
+            ping_dict["error"] = m.group(1)
+        elif "Sending" in result:
+            ping_dict["success"] = {
+                    "probe_sent": 0,
+                    "packet_loss": 0,
+                    "rtt_min": 0.0,
+                    "rtt_max": 0.0,
+                    "rtt_avg": 0.0,
+                    "rtt_stddev": 0.0,
+                    "results": [],
+             }
+            for line in result.splitlines():
+                if "Success rate is" in line:
+                    sent_and_received = re.search(r"\((\d*)/(\d*)\)", line)
+                    probes_sent = int(sent_and_received.group(2))
+                    probes_received = int(sent_and_received.group(1))
+                    ping_dict["success"]["probes_sent"] = probes_sent
+                    ping_dict["success"]["packet_loss"] = probes_sent - probes_received
+                    # If there were zero valid response packets, we are done
+                    if "Success rate is 0 " in line:
+                        break
 
-        # try to parse the output
-        m = re.search(r'Success rate is [\d\.]+ percent \((\d+)\/(\d+)\).+ = (\d+)\/(\d+)\/(\d+)', result)
-        if not m:
-            return {
-                'error': 'could not parse output',
-            }
+                    min_avg_max = re.search(r"(\d*)/(\d*)/(\d*)", line)
+                    ping_dict["success"].update(
+                        {
+                            "rtt_min": float(min_avg_max.group(1)),
+                            "rtt_avg": float(min_avg_max.group(2)),
+                            "rtt_max": float(min_avg_max.group(3)),
+                        }
+                    )
+                    results_array = []
+                    for i in range(probes_received):
+                        results_array.append(
+                            {
+                                "ip_address": py23_compat.text_type(destination),
+                                "rtt": 0.0,
+                            }
+                        )
+                    ping_dict["success"].update({"results": results_array})
 
-        g = m.groups()
-        return {
-            'success': {
-                'probes_sent': int(g[1]),
-                'packet_loss': int(g[1]) - int(g[0]),
-                'rtt_min':     float(g[2]),
-                'rtt_avg':     float(g[3]),
-                'rtt_max':     float(g[4]),
-                'rtt_stddev':  0.0,  # not implemented
-                'results': [
-                    {
-                        'ip_address': ip(destination),
-                        'rtt':        float(g[3]),
-                    }
-                ],
-            }
-        }
+        return ping_dict
 
     def traceroute(self, destination, source=u'', ttl=255, timeout=2, vrf=u''):
         """FTOS implementation of traceroute."""
