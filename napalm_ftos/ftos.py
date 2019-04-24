@@ -817,21 +817,21 @@ class FTOSDriver(NetworkDriver):
                         continue
 
                     route = {
-                        "current_active": True,
-                        "last_active": True,
+                        "current_active": -1, # Not implimented
+                        "last_active": -1, # Not implimented
                         "age": -1,
                         "next_hop": "",
                         "protocol": item['protocol'],
                         "outgoing_interface": item['outgoing_interface'],
-                        "preference": 0,
-                        "inactive_reason": "",
+                        "preference": 0, # Not implimented
+                        "inactive_reason": -1, # Not implimented
                         "routing_table": _vrf['vrf_name'],
-                        "selected_next_hop": True,
+                        "selected_next_hop": -1, # Not implimented
                         "protocol_attributes": {},
                     }
 
                     if item['distance']:
-                        route['distance'] = int(item['distance'])
+                        route['preference'] = int(item['distance'])
 
                     if item['age']:
                         age = 0
