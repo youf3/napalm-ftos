@@ -790,6 +790,67 @@ class FTOSDriver(NetworkDriver):
 
         return ping_dict
 
+    def get_route_to(self, destination="", protocol=""):
+        routes = {}
+
+        vrfs = self._get_vrfs()
+
+        for _vrf in vrfs:
+            cmd = ["show ip route"]
+
+            cmd.append('vrf '+_vrf['vrf_name'])
+
+            cmd.append(destination)
+
+
+            command = ' '.join(cmd)
+            result = self._send_command(command)
+            if 'Routing entry' not in result:
+                break
+            result = textfsm_extractor(self, 'show_ip_route_destination', result)
+            for item in result:
+                if item['prefix'] not in routes:
+                    routes[item['prefix']] = []
+
+                for next_hop in item['next_hop']:
+                    if not next_hop:
+                        continue
+
+                    route = {
+                        "current_active": True,
+                        "last_active": True,
+                        "age": -1,
+                        "next_hop": "",
+                        "protocol": item['protocol'],
+                        "outgoing_interface": item['outgoing_interface'],
+                        "preference": 0,
+                        "inactive_reason": "",
+                        "routing_table": _vrf['vrf_name'],
+                        "selected_next_hop": True,
+                        "protocol_attributes": {},
+                    }
+
+                    if item['distance']:
+                        route['distance'] = int(item['distance'])
+
+                    if item['age']:
+                        age = 0
+                        matches = re.finditer(r'(?P<week>\d+(?=w))?(?P<day>\d+(?=d))?(?P<hour>\d+(?=h))?',item['age'])
+                        if matches:
+                            for match in matches:
+                                if match.group('week'):
+                                    age += int(match.group('week')) * 7 * 24
+                                if match.group('day'):
+                                    age += int(match.group('day')) * 24
+                                if match.group('hour'):
+                                    age += int(match.group('hour'))
+                        route['age'] = age
+
+                    route['next_hop'] = next_hop
+                    routes[item['prefix']].append(route)
+
+        return routes
+
     def traceroute(self, destination, source=u'', ttl=255, timeout=2, vrf=u''):
         """FTOS implementation of traceroute."""
         # source, ttl and timeout are not implemented and therefore ignored

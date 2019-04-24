@@ -23,6 +23,7 @@ NAPALM driver for Dell EMC/Force10 FTOS
 * get_mac_address_table
 * get_ntp_peers
 * get_ntp_servers
+* get_route_to
 * get_ntp_stats
 * get_snmp_information
 * get_users
@@ -46,7 +47,6 @@ NAPALM driver for Dell EMC/Force10 FTOS
 * get_optics
 * get_probes_config
 * get_probes_results
-* get_route_to
 * load_merge_candidate
 * load_replace_candidate
 * load_template

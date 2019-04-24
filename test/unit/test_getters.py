@@ -96,6 +96,16 @@ class TestGetter(BaseTestGetters):
         return get_config
 
     @wrap_test_cases
+    def test_get_route_to(self, test_case):
+        """There is little to test with this function."""
+        raise NotImplementedError
+
+    @wrap_test_cases
+    def test_ping(self, test_case):
+        """There is little to test with this function."""
+        raise NotImplementedError
+
+    @wrap_test_cases
     def test_is_alive(self, test_case):
         """There is little to test with this function."""
         raise NotImplementedError
