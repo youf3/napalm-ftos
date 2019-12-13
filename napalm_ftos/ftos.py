@@ -17,6 +17,7 @@
 
 import re
 import socket
+import difflib
 
 from napalm.base.helpers import textfsm_extractor
 from napalm.base.helpers import mac, ip
@@ -51,6 +52,17 @@ class FTOSDriver(NetworkDriver):
             optional_args = {}
 
         self.netmiko_optional_args = netmiko_args(optional_args)
+
+        # Retrieve file names
+        self.candidate_cfg = optional_args.get('candidate_cfg',
+                'candidate_config.txt')
+        self.merge_cfg = optional_args.get('merge_cfg', 'merge_config.txt')
+        self.rollback_cfg = optional_args.get('rollback_cfg',
+                'rollback_config.txt')
+        self.merge_cfg = optional_args.get('merge_cfg', 'merge_config.txt')
+
+
+        self.config_replace = False
 
     def _send_command(self, command):
         try:
@@ -104,61 +116,76 @@ class FTOSDriver(NetworkDriver):
 
         return table
 
+    def _get_vrfs(self):
+        cmd = ["show ip vrf"]
+        vrfs = self._send_command(cmd)
+        vrfs = textfsm_extractor(self, 'show_ip_vrf', vrfs)
+        return vrfs
+
     def get_bgp_neighbors_detail(self, neighbor_address=u''):
         """FTOS implementation of get_bgp_neighbors_detail."""
-        cmd = ["show ip bgp neighbors"]
-        if len(neighbor_address.strip()) > 0:
-            cmd.append(neighbor_address)
 
-        command = ' '.join(cmd)
-        neighbors = self._send_command(command)
-        neighbors = textfsm_extractor(self, 'show_ip_bgp_neighbors', neighbors)
+        table = {}
 
-        table = {u'global': {}}
-        for idx, entry in enumerate(neighbors):
-            # TODO: couldn't detect VRF from output
-            vrf = u'global'
+        vrfs = self._get_vrfs()
 
-            neighbor = {
-                "up": (entry['connection_state'] == 'ESTABLISHED'),
-                "local_as": -1,  # unimplemented
-                "router_id": ip(entry['router_id']),
-                "local_address": py23_compat.text_type(entry['local_address']),
-                "routing_table": u'',  # unimplemented
-                "local_address_configured": False,  # unimplemented
-                "local_port": entry['local_port'],
-                "remote_address": ip(entry['remote_address']),
-                "multihop": False,  # unimplemented
-                "multipath": False,  # unimplemented
-                "remove_private_as": False,  # unimplemented
-                "import_policy": u'',  # unimplemented
-                "export_policy": u'',  # unimplemented
-                "connection_state": entry['connection_state'],
-                "previous_connection_state": u'',  # unimplemented
-                "last_event": u'',  # unimplemented
-                "suppress_4byte_as": False,  # unimplemented
-                "local_as_prepend": False,  # unimplemented
-                "configured_holdtime": -1,  # unimplemented
-                "configured_keepalive": -1,  # unimplemented
-                "active_prefix_count": -1,  # unimplemented
-                "received_prefix_count": -1,  # unimplemented
-                "suppressed_prefix_count": -1,  # unimplemented
-            }
+        for vrf in vrfs:
+            if vrf['vrf_name'] not in table:
+                table[vrf['vrf_name']] = {}
 
-            # cast some integers
-            for k in ['remote_as', 'local_port', 'remote_port', 'input_messages',
-                      'output_messages', 'input_updates', 'output_updates',
-                      'messages_queued_out', 'holdtime', 'keepalive',
-                      'accepted_prefix_count', 'advertised_prefix_count',
-                      'flap_count']:
-                try:
-                    neighbor[k] = int(entry[k])
-                except ValueError:
-                    neighbor[k] = -1
 
-            if entry['remote_as'] not in table[vrf]:
-                table[vrf][int(entry['remote_as'])] = []
-            table[vrf][int(entry['remote_as'])].append(neighbor)
+            cmd = ["show ip bgp vrf "+vrf['vrf_name']+" neighbors"]
+            if len(neighbor_address.strip()) > 0:
+                cmd.append(neighbor_address)
+
+            command = ' '.join(cmd)
+            neighbors = self._send_command(command)
+            neighbors = textfsm_extractor(self, 'show_ip_bgp_neighbors', neighbors)
+            for idx, entry in enumerate(neighbors):
+                if not entry['router_id']:
+                    continue
+
+                neighbor = {
+                    "up": (entry['connection_state'] == 'ESTABLISHED'),
+                    "local_as": -1,  # unimplemented
+                    "router_id": ip(entry['router_id']),
+                    "local_address": py23_compat.text_type(entry['local_address']),
+                    "routing_table": vrf['vrf_name'],
+                    "local_address_configured": False,  # unimplemented
+                    "local_port": entry['local_port'],
+                    "remote_address": ip(entry['remote_address']),
+                    "remote_as": int(entry['remote_as']),
+                    "multihop": False,  # unimplemented
+                    "multipath": False,  # unimplemented
+                    "remove_private_as": False,  # unimplemented
+                    "import_policy": u'',  # unimplemented
+                    "export_policy": u'',  # unimplemented
+                    "connection_state": entry['connection_state'],
+                    "previous_connection_state": u'',  # unimplemented
+                    "last_event": u'',  # unimplemented
+                    "suppress_4byte_as": False,  # unimplemented
+                    "local_as_prepend": False,  # unimplemented
+                    "configured_holdtime": -1,  # unimplemented
+                    "configured_keepalive": -1,  # unimplemented
+                    "active_prefix_count": -1,  # unimplemented
+                    "received_prefix_count": -1,  # unimplemented
+                    "suppressed_prefix_count": -1,  # unimplemented
+                }
+
+                # cast some integers
+                for k in ['remote_as', 'local_port', 'remote_port', 'input_messages',
+                          'output_messages', 'input_updates', 'output_updates',
+                          'messages_queued_out', 'holdtime', 'keepalive',
+                          'accepted_prefix_count', 'advertised_prefix_count',
+                          'flap_count']:
+                    try:
+                        neighbor[k] = int(entry[k])
+                    except ValueError:
+                        neighbor[k] = -1
+
+                if neighbor['remote_as'] not in table[vrf['vrf_name']]:
+                    table[vrf['vrf_name']][neighbor['remote_as']] = []
+                table[vrf['vrf_name']][neighbor['remote_as']].append(neighbor)
 
         return table
 
@@ -177,6 +204,42 @@ class FTOSDriver(NetworkDriver):
             config['startup'] = self._send_command("show startup-config")
 
         return config
+
+    def _remove_unusedline(self, text):
+        ignore_start_line = [
+                "!",
+                "Current Configuration"
+                ]
+        data = []
+
+        for lines in text.splitlines():
+            for ignore in ignore_start_line:
+                if lines.startswith(ignore):
+                    break
+            else:
+                data.append(lines)
+        return data
+
+    def compare_config(self):
+	"""compares the copied merge_config.txt with running-configuration."""
+	if self.config_replace:
+	    new_file = self.candidate_cfg
+	else:
+	    new_file = self.merge_cfg
+	#cmd = "show file {}".format(new_file)
+	#new_file_data = self._send_command(cmd)
+	cmd = "show startup"
+	new_file_data = self._send_command(cmd)
+
+	cmd = "show running"
+	running_config_data = self._send_command(cmd)
+
+        candidate = self._remove_unusedline(new_file_data)
+        candidate2 = self._remove_unusedline(running_config_data)
+
+        diff = difflib.unified_diff(candidate, candidate2)
+
+	return '\n'.join(diff)
 
     def get_environment(self):
         """FTOS implementation of get_environment."""
@@ -245,6 +308,9 @@ class FTOSDriver(NetworkDriver):
 
         show_ver = self._send_command("show system stack-unit 0")
 
+        if "% Error: Value out of range at \"^\" marker." in show_ver:
+            show_ver = self._send_command("show system stack-unit 1")
+
         # parse version output
         for line in show_ver.splitlines():
             if line.startswith('Up Time'):
@@ -254,9 +320,15 @@ class FTOSDriver(NetworkDriver):
                 facts['vendor'] = line.split(': ')[1].strip()
             elif ' OS Version' in line:
                 facts['os_version'] = line.split(': ')[1].strip()
+            elif line.startswith('FTOS Version'):
+                facts['os_version'] = line.split(': ')[1].strip()
             elif line.startswith('Serial Number'):
                 facts['serial_number'] = line.split(': ')[1].strip()
+            elif line.startswith('Service Tag'):
+                facts['serial_number'] = line.split(': ')[1].strip()
             elif line.startswith('Product Name'):
+                facts['model'] = line.split(': ')[1].strip()
+            elif line.startswith('Current Type'):
                 facts['model'] = line.split(': ')[1].strip()
 
         # invoke get_interfaces and list interfaces
@@ -281,7 +353,7 @@ class FTOSDriver(NetworkDriver):
             for lldp_entry in entries:
                 hostname = lldp_entry['remote_system_name']
                 lldp_dict = {
-                    'port': lldp_entry['remote_port_description'],
+                    'port': lldp_entry['remote_port'],
                     'hostname': hostname,
                 }
                 lldp[intf_name].append(lldp_dict)
@@ -318,7 +390,7 @@ class FTOSDriver(NetworkDriver):
             local_intf = canonical_interface_name(lldp_entry.pop('local_interface'))
 
             # cast some mac addresses
-            for k in ['remote_port', 'remote_chassis_id']:
+            for k in ['remote_chassis_id']:
                 if len(lldp_entry[k].strip()) > 0:
                     lldp_entry[k] = mac(lldp_entry[k])
 
@@ -364,6 +436,8 @@ class FTOSDriver(NetworkDriver):
         interfaces = {}
         for i, entry in enumerate(iface_entries):
             if len(entry['iface_name']) == 0:
+                continue
+            if len(entry['mac_address']) == 0:
                 continue
 
             # init interface entry with default values
@@ -565,6 +639,30 @@ class FTOSDriver(NetworkDriver):
 
         return stats
 
+    def cli(self, commands):
+        """
+        Execute a list of commands and return the output in a dictionary format using the command
+        as the key.
+
+        Example input:
+        ['show clock', 'show calendar']
+
+        Output example:
+        {   'show calendar': u'22:02:01 UTC Thu Feb 18 2016',
+            'show clock': u'*22:01:51.165 UTC Thu Feb 18 2016'}
+
+        """
+        cli_output = dict()
+        if type(commands) is not list:
+            raise TypeError("Please enter a valid list of commands!")
+
+        for command in commands:
+            output = self._send_command(command)
+            cli_output.setdefault(command, {})
+            cli_output[command] = output
+
+        return cli_output
+
     def get_snmp_information(self):
         """FTOS implementation of get_snmp_information."""
         command = "show running-config snmp"
@@ -642,13 +740,14 @@ class FTOSDriver(NetworkDriver):
     def ping(self, destination, source=u'', ttl=255, timeout=2, size=100, count=5, vrf=u''):
         """FTOS implementation of ping."""
         # build command string based on input
+        ping_dict = {}
         cmd = ["ping"]
-        if len(vrf.strip()) > 0:
+        if vrf:
             cmd.append("vrf %s" % vrf)
         cmd.append(destination)
         cmd.append("timeout %d" % timeout)
         cmd.append("datagram-size %d" % size)
-        if len(source.strip()) > 0:
+        if source != "":
             cmd.append("source ip %s" % source)
         cmd.append("count %d" % count)
 
@@ -656,36 +755,110 @@ class FTOSDriver(NetworkDriver):
         result = self._send_command(command)
 
         # check if output holds an error
-        m = re.search(r'% Error: (.+)', result)
-        if m:
-            return {
-                'error': m.group(1)
-            }
+        if "%" in result:
+            ping_dict["error"] = result
+        elif "Sending" in result:
+            ping_dict["success"] = {
+                    "probe_sent": 0,
+                    "packet_loss": 0,
+                    "rtt_min": 0.0,
+                    "rtt_max": 0.0,
+                    "rtt_avg": 0.0,
+                    "rtt_stddev": 0.0,
+                    "results": [],
+             }
+            for line in result.splitlines():
+                if "Success rate is" in line:
+                    sent_and_received = re.search(r"\((\d*)/(\d*)\)", line)
+                    probes_sent = int(sent_and_received.group(2))
+                    probes_received = int(sent_and_received.group(1))
+                    ping_dict["success"]["probes_sent"] = probes_sent
+                    ping_dict["success"]["packet_loss"] = probes_sent - probes_received
+                    # If there were zero valid response packets, we are done
+                    if "Success rate is 0 " in line:
+                        break
 
-        # try to parse the output
-        m = re.search(r'Success rate is [\d\.]+ percent \((\d+)\/(\d+)\).+ = (\d+)\/(\d+)\/(\d+)', result)
-        if not m:
-            return {
-                'error': 'could not parse output',
-            }
+                    min_avg_max = re.search(r"(\d*)/(\d*)/(\d*)", line)
+                    if min_avg_max:
+                        ping_dict["success"].update(
+                        {
+                            "rtt_min": float(min_avg_max.group(1)),
+                            "rtt_avg": float(min_avg_max.group(2)),
+                            "rtt_max": float(min_avg_max.group(3)),
+                            }
+                        )
+                    results_array = []
+                    for i in range(probes_received):
+                        results_array.append(
+                            {
+                                "ip_address": py23_compat.text_type(destination),
+                                "rtt": 0.0,
+                            }
+                        )
+                    ping_dict["success"].update({"results": results_array})
 
-        g = m.groups()
-        return {
-            'success': {
-                'probes_sent': int(g[1]),
-                'packet_loss': int(g[1]) - int(g[0]),
-                'rtt_min':     float(g[2]),
-                'rtt_avg':     float(g[3]),
-                'rtt_max':     float(g[4]),
-                'rtt_stddev':  0.0,  # not implemented
-                'results': [
-                    {
-                        'ip_address': ip(destination),
-                        'rtt':        float(g[3]),
+        return ping_dict
+
+    def get_route_to(self, destination="", protocol=""):
+        routes = {}
+
+        vrfs = self._get_vrfs()
+
+        for _vrf in vrfs:
+            cmd = ["show ip route"]
+
+            cmd.append('vrf '+_vrf['vrf_name'])
+
+            cmd.append(destination)
+
+
+            command = ' '.join(cmd)
+            result = self._send_command(command)
+            if 'Routing entry' not in result:
+                break
+            result = textfsm_extractor(self, 'show_ip_route_destination', result)
+            for item in result:
+                if item['prefix'] not in routes:
+                    routes[item['prefix']] = []
+
+                for next_hop in item['next_hop']:
+                    if not next_hop:
+                        continue
+
+                    route = {
+                        "current_active": -1, # Not implimented
+                        "last_active": -1, # Not implimented
+                        "age": -1,
+                        "next_hop": "",
+                        "protocol": item['protocol'],
+                        "outgoing_interface": item['outgoing_interface'],
+                        "preference": 0, # Not implimented
+                        "inactive_reason": -1, # Not implimented
+                        "routing_table": _vrf['vrf_name'],
+                        "selected_next_hop": -1, # Not implimented
+                        "protocol_attributes": {},
                     }
-                ],
-            }
-        }
+
+                    if item['distance']:
+                        route['preference'] = int(item['distance'])
+
+                    if item['age']:
+                        age = 0
+                        matches = re.finditer(r'(?P<week>\d+(?=w))?(?P<day>\d+(?=d))?(?P<hour>\d+(?=h))?',item['age'])
+                        if matches:
+                            for match in matches:
+                                if match.group('week'):
+                                    age += int(match.group('week')) * 7 * 24
+                                if match.group('day'):
+                                    age += int(match.group('day')) * 24
+                                if match.group('hour'):
+                                    age += int(match.group('hour'))
+                        route['age'] = age
+
+                    route['next_hop'] = next_hop
+                    routes[item['prefix']].append(route)
+
+        return routes
 
     def traceroute(self, destination, source=u'', ttl=255, timeout=2, vrf=u''):
         """FTOS implementation of traceroute."""

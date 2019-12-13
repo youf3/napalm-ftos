@@ -77,7 +77,7 @@ Start
   ^\s*Prefixes advertised ${ADVERTISED_PREFIX_COUNT},
   ^\s*Connections established \d+; dropped ${FLAP_COUNT}
   ^Local host: ${LOCAL_ADDRESS}, Local port: ${LOCAL_PORT}
-  ^Foreign host: ${REMOTE_ADDRESS}, Foreign port: ${REMOTE_PORT} -> Record
+  ^Foreign host: ${REMOTE_ADDRESS}, Foreign port: ${REMOTE_PORT} -> Next.Record
 
 Received
   ^.*, ${INPUT_UPDATES} updates -> Start
