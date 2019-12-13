@@ -221,25 +221,25 @@ class FTOSDriver(NetworkDriver):
         return data
 
     def compare_config(self):
-	"""compares the copied merge_config.txt with running-configuration."""
-	if self.config_replace:
-	    new_file = self.candidate_cfg
-	else:
-	    new_file = self.merge_cfg
-	#cmd = "show file {}".format(new_file)
-	#new_file_data = self._send_command(cmd)
-	cmd = "show startup"
-	new_file_data = self._send_command(cmd)
+        """compares the copied merge_config.txt with running-configuration."""
+        if self.config_replace:
+            new_file = self.candidate_cfg
+        else:
+            new_file = self.merge_cfg
+        #cmd = "show file {}".format(new_file)
+        #new_file_data = self._send_command(cmd)
+        cmd = "show startup"
+        new_file_data = self._send_command(cmd)
 
-	cmd = "show running"
-	running_config_data = self._send_command(cmd)
+        cmd = "show running"
+        running_config_data = self._send_command(cmd)
 
         candidate = self._remove_unusedline(new_file_data)
         candidate2 = self._remove_unusedline(running_config_data)
 
         diff = difflib.unified_diff(candidate, candidate2)
 
-	return '\n'.join(diff)
+        return '\n'.join(diff)
 
     def get_environment(self):
         """FTOS implementation of get_environment."""
