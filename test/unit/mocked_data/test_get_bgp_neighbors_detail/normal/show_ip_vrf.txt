@@ -1,0 +1,5 @@
+VRF-Name                         VRF-ID Interfaces
+default                          0       Fo 1/51,1/52,1/54,
+                                          Ma 1/1,
+                                          Nu 0,
+                                          Vl 1,202,999,2000,3301
