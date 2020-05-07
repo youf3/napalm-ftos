@@ -51,6 +51,7 @@ class FTOSDriver(NetworkDriver):
         if optional_args is None:
             optional_args = {}
 
+        self.force_no_enable = optional_args.get("force_no_enable", False)
         self.netmiko_optional_args = netmiko_args(optional_args)
 
         # Retrieve file names
